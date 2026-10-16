@@ -3,10 +3,7 @@
 from dataclasses import dataclass
 from collections.abc import Mapping
 
-if __package__:
-    from .wikihopper_config import CONFIG, EDGE_NAMES
-else:
-    from wikihopper_config import CONFIG, EDGE_NAMES
+from .config import CONFIG, EDGE_NAMES
 
 
 @dataclass(frozen=True)

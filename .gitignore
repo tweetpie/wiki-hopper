@@ -1,0 +1,11 @@
+# Local configuration and generated data
+wikihopper.toml
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
