@@ -12,7 +12,7 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from wikihopper_config import CONFIG_PATH, load_config
+from .config import CONFIG_PATH, load_config
 
 
 SUFFIXES = (
@@ -150,7 +150,8 @@ def main(argv=None):
     return 0
 
 
-if __name__ == "__main__":
+def run():
+    """Console entry point with the downloader's exit codes and messages."""
     try:
         sys.exit(main())
     except KeyboardInterrupt:
@@ -159,3 +160,7 @@ if __name__ == "__main__":
     except (OSError, ValueError) as exc:
         print(f"Configuration or setup error: {exc}", file=sys.stderr)
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    run()

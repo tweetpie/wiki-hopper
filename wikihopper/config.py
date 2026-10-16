@@ -1,11 +1,15 @@
-"""Shared configuration, loaded once per process (Python 3.11+)."""
+"""Shared configuration, loaded once per process (Python 3.11+).
+
+The configuration file is ``wikihopper.toml`` in the repository root, beside
+this package. It is read at import time; a missing or invalid file is an error.
+"""
 
 from pathlib import Path
 import math
 import re
 import tomllib
 
-CONFIG_PATH = Path(__file__).resolve().with_name("wikihopper.toml")
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "wikihopper.toml"
 EDGE_NAMES = ("HAS_CATEGORY", "SUBCATEGORY_OF", "HAS_DISAMBIGUATION",
               "DISAMBIGUATES_TO", "LANGUAGE_EQUIVALENT")
 COST_DIRECTIONS = {

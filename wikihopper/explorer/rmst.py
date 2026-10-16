@@ -33,11 +33,8 @@ def _integer(value, label, low, high):
 def _api(api):
     if api is not None:
         return api
-    if __package__:
-        from . import explorer
-    else:
-        import explorer
-    return explorer
+    from . import graph_api
+    return graph_api
 
 
 def _resolve(con, item, default_language, api):

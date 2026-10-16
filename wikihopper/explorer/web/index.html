@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>WikiHopper Explorer</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+__STYLE__</style>
+</head>
+<body>
+<div id="app">
+  <div id="side">
+    <div>
+      <h1>WikiHopper Explorer</h1>
+      <div class="muted">Search a page, then click nodes to expand. Double-click a node to expand it.</div>
+      <div id="datasetInfo" class="muted" style="margin-top:6px">Reading loaded dataset...</div>
+    </div>
+    <div class="row"><label for="searchLanguage" class="muted">Search language</label>
+      <select id="searchLanguage"></select></div>
+    <input id="q" type="text" placeholder="Search title (e.g. Apple)" autocomplete="off"/>
+    <div class="results" id="results"></div>
+
+    <div class="panel" id="routePolicyPanel">
+      <div style="font-weight:600; font-size:13px">Route languages</div>
+      <div id="routeLanguages" class="row">Reading loaded languages...</div>
+      <div style="font-weight:600; font-size:13px; margin-top:8px">Route relationships</div>
+      <div class="row"><label class="chk"><input class="routeEdge" type="checkbox" value="HAS_CATEGORY" checked/> Category membership</label></div>
+      <div class="row"><label class="chk"><input class="routeEdge" type="checkbox" value="SUBCATEGORY_OF" checked/> Category hierarchy</label></div>
+      <div class="row"><label class="chk"><input class="routeEdge" type="checkbox" value="HAS_DISAMBIGUATION,DISAMBIGUATES_TO" checked/> Disambiguation</label></div>
+      <div class="row"><label class="chk"><input class="routeEdge" type="checkbox" value="LANGUAGE_EQUIVALENT" checked/> Language identity</label></div>
+      <div class="row"><label class="chk"><input id="routeAmbiguityGuard" type="checkbox"/> Prevent consecutive ambiguity bridges</label></div>
+      <div class="muted" style="margin-top:7px">Applies to path search, selected routes and R-MST. Suggestion languages and neighborhood filters are separate.</div>
+    </div>
+
+    <div class="panel">
+      <div class="slider-row">
+        <span>Max/expand</span>
+        <input id="limit" type="range" min="10" max="500" step="10" value="120"/>
+        <span id="limitVal">120</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="chk"><input type="checkbox" class="etype" value="HAS_CATEGORY" checked/> categories</label>
+        <label class="chk"><input type="checkbox" class="etype" value="SUBCATEGORY_OF" checked/> subcats</label>
+      </div>
+      <div class="row">
+        <label class="chk"><input type="checkbox" class="etype" value="HAS_DISAMBIGUATION" checked/> disambig</label>
+        <label class="chk"><input type="checkbox" class="etype" value="DISAMBIGUATES_TO" checked/> members</label>
+      </div>
+      <div class="row">
+        <label class="chk"><input type="checkbox" class="etype" value="LANGUAGE_EQUIVALENT" checked/> language equivalents</label>
+      </div>
+    </div>
+
+    <!-- RMST_PANEL_START -->
+    <details class="panel" id="rmstPanel">
+      <summary>R-MST / result-set connectivity</summary>
+      <div class="muted" style="margin-top:7px">Add articles or paste one title per line in ranking order. Use language:title for mixed languages.</div>
+      <div class="row"><label class="muted" for="rmstLanguage">Article language</label><select id="rmstLanguage"></select></div>
+      <input id="rmstSearch" type="text" placeholder="Find an article to add..." autocomplete="off" style="margin-top:7px"/>
+      <div class="results" id="rmstSearchRes" style="max-height:120px"></div>
+      <div class="row"><button class="btn" id="rmstAddSearch">Add article</button><button class="btn" id="rmstAddSelected">Add selected node</button></div>
+      <label for="rmstArticles" class="muted" style="display:block; margin:7px 0 4px">Ranked article list</label>
+      <textarea id="rmstArticles" placeholder="en:Earth&#10;es:Tierra&#10;tr:Dünya" spellcheck="false"></textarea>
+      <div class="row"><label for="rmstK" class="muted">Top-k</label><input type="number" id="rmstK" value="20" min="1" max="50"/>
+        <label for="rmstSeconds" class="muted">Max time</label><select id="rmstSeconds"><option value="12">12 seconds</option><option value="30" selected>30 seconds</option><option value="60">1 minute</option></select>
+        <input type="number" id="rmstCustomSeconds" min="0" step="any" value="3600" hidden aria-label="Custom R-MST maximum time in seconds" style="width:110px"/></div>
+      <div class="row"><label class="chk"><input type="checkbox" id="rmstExhaustive" checked/> Full graph search</label></div>
+      <div class="muted">Full graph search disables hub pruning and node limits. The time allowance still applies.</div>
+      <div class="row"><button class="btn" id="rmstCheck">Check list</button><button class="btn primary" id="rmstGo">Calculate R-MST</button></div>
+      <div id="rmstPreview" aria-live="polite" style="margin-top:7px; font-size:12px"></div>
+      <div id="rmstResult" aria-live="polite" style="margin-top:7px; font-size:12px"></div>
+      <div class="muted" style="margin-top:7px">R-MST is the mean tree-edge cost. Smaller values describe tighter graph structure. Tree links use the cheaper directional path and the shared route settings above.</div>
+    </details>
+    <!-- RMST_PANEL_END -->
+
+    <div class="panel" id="selectedPathPanel">
+      <div style="font-weight:600; font-size:13px; margin-bottom:6px">Selected path</div>
+      <div class="muted">Ctrl-click expanded nodes in route order. Each consecutive pair must share a relationship. Use the arrows to change the order.</div>
+      <ol id="selectedPathList" aria-label="Selected route order"></ol>
+      <div class="row">
+        <button class="btn primary" id="selectedPathTest" disabled>Test selected path</button>
+        <button class="btn" id="selectedPathReverse" disabled>Reverse</button>
+        <button class="btn" id="selectedPathClear" disabled>Clear selection</button>
+      </div>
+      <div id="selectedPathResult" aria-live="polite" style="margin-top:8px; font-size:12px">Select at least two nodes.</div>
+    </div>
+
+    <div class="panel" id="pathPanel">
+      <div style="font-weight:600; font-size:13px; margin-bottom:6px">Distance / shortest path</div>
+      <div class="row"><label for="pfFromLanguage" class="muted">From suggestion language</label>
+        <select id="pfFromLanguage"></select></div>
+      <input id="pfFrom" type="text" placeholder="From article..." autocomplete="off"/>
+      <div class="results" id="pfFromRes" style="max-height:120px"></div>
+      <div class="row"><label for="pfToLanguage" class="muted">To suggestion language</label>
+        <select id="pfToLanguage"></select></div>
+      <input id="pfTo" type="text" placeholder="To article..." autocomplete="off" style="margin-top:6px"/>
+      <div class="results" id="pfToRes" style="max-height:120px"></div>
+      <div class="row" style="margin-top:6px">
+        <button class="btn" id="pfUseSel">Use selected as From</button>
+        <button class="btn" id="pfUseSelTo">Use selected as To</button>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label for="pfTimeout" class="muted">Max time</label>
+        <select id="pfTimeout">
+          <option value="5">5 seconds</option>
+          <option value="12">12 seconds</option>
+          <option value="30">30 seconds</option>
+          <option value="60">1 minute</option>
+          <option value="120">2 minutes</option>
+          <option value="300">5 minutes</option>
+        </select>
+        <input type="number" id="pfCustomSeconds" min="0" step="any" value="3600" hidden aria-label="Custom shortest-path maximum time in seconds" style="width:110px"/>
+        <button class="btn primary" id="pfGo">Find path</button>
+      </div>
+      <div class="row" style="margin-top:6px"><label class="chk"><input type="checkbox" id="pfExhaustive" checked/> Full graph search</label></div>
+      <div class="muted">Full graph search disables hub pruning and node limits. The time allowance still applies.</div>
+      <div id="pfResult" style="margin-top:8px; font-size:12px;"></div>
+    </div>
+
+    <div class="panel" id="selPanel" style="display:none">
+      <div class="sel-title" id="selTitle"></div>
+      <div class="kv" id="selMeta"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="btnExpand">Expand</button>
+        <button class="btn" id="btnHide">Remove</button>
+        <button class="btn" id="btnFocus">Focus</button>
+        <button class="btn" id="btnRmst">Add to R-MST</button>
+        <a class="btn" id="btnWiki" href="#" target="_blank" rel="noopener noreferrer">Wikipedia &#8599;</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div id="status"></div>
+      <div class="row"><button class="btn" id="btnClear">Clear canvas</button></div>
+    </div>
+
+    <div class="panel" id="provPanel" style="display:none">
+      <div style="font-weight:600; font-size:13px; margin-bottom:4px">Edge provenance</div>
+      <div class="kv" id="provHead"></div>
+      <div id="provBody" style="margin-top:6px; font-size:12px;"></div>
+    </div>
+
+    <div class="panel legend">
+      <span><span class="dot" style="background:#4a90e2"></span>article</span>
+      <span><span class="dot" style="background:#40c07d"></span>category</span>
+      <span><span class="dot" style="background:#e0a63a"></span>disambiguation</span>
+      <div class="muted" style="margin-top:6px">Edge weight is the larger directional cost. Hover an edge to see both costs.</div>
+    </div>
+  </div>
+  <div id="net"></div>
+</div>
+
+<script>
+__SCRIPT__</script>
+</body>
+</html>
