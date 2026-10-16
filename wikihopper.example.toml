@@ -1,0 +1,89 @@
+# Copy this file to wikihopper.toml before running WikiHopper, then edit the copy.
+# Your wikihopper.toml is local configuration and is excluded from Git.
+# Python 3.11+ is required. No additional Python packages are needed.
+# CLI flags override these settings. Restart running processes after edits.
+# Relative paths resolve beside the configuration file.
+# Windows paths: use forward slashes or TOML single-quoted strings.
+# Passwords belong in WIKIHOPPER_PASSWORD or --password, not this file.
+
+[paths]
+output = "data"
+database = "data/graph.db"
+# Optional source files for English dump snippets in Explorer.
+# Replace YYYYMM01 with your downloaded snapshot date to enable those snippets.
+# The multilingual dump extractor discovers the newest local snapshot separately.
+xml = "data/dumps/YYYYMM01/enwiki/enwiki-YYYYMM01-pages-articles-multistream.xml.bz2"
+index = "data/dumps/YYYYMM01/enwiki/enwiki-YYYYMM01-pages-articles-multistream-index.txt.bz2"
+
+# Costs must be finite and >= 0. CSV/display weight = larger directional cost.
+# Category forward follows the stored edge; reverse traverses it backwards.
+# Cost changes apply on restart and need no database rebuild for traversal.
+# Stored CSV/database weights remain snapshots of the build configuration.
+[costs.HAS_CATEGORY]
+forward = 0.0
+reverse = 1.0
+
+[costs.SUBCATEGORY_OF]
+forward = 0.5
+reverse = 0.5
+
+# An article-edition switch verified by a shared Wikidata item.
+# Keep these equal for symmetric language switching.
+[costs.LANGUAGE_EQUIVALENT]
+forward = 0.5
+reverse = 0.5
+
+# Shared by HAS_DISAMBIGUATION and DISAMBIGUATES_TO; directions follow roles.
+[costs.DISAMBIGUATION]
+article_to_disambiguation = 0.0
+disambiguation_to_article = 0.0
+
+# The base language is a display preference. Routes can use all enabled editions.
+# To add an edition, add its code here and a matching [languages.<code>] profile.
+[multilingual]
+base_language = "en"
+languages = ["en", "es", "tr"]
+
+[languages.en]
+name = "English"
+wiki = "enwiki"
+disambiguation_suffixes = [" (disambiguation)"]
+excluded_disambiguation_sections = ["See also", "References", "External links", "Further reading", "Notes", "Sources", "Bibliography"]
+
+[languages.es]
+name = "Español"
+wiki = "eswiki"
+disambiguation_suffixes = [" (desambiguación)"]
+excluded_disambiguation_sections = ["Véase también", "Referencias", "Enlaces externos", "Bibliografía", "Notas"]
+
+[languages.tr]
+name = "Türkçe"
+wiki = "trwiki"
+disambiguation_suffixes = [" (anlam ayrımı)"]
+case_replacements = { "I" = "ı", "İ" = "i" }
+excluded_disambiguation_sections = ["Ayrıca bakınız", "Kaynakça", "Dış bağlantılar", "Notlar"]
+
+[explorer]
+host = "127.0.0.1"
+port = 8000
+low_memory = false
+rmst_enabled = true
+# Also adjustable per request in Explorer's route policy controls.
+ambiguity_guard = true
+
+# Limits used when Full graph search is unchecked in Explorer.
+[search]
+# Incoming/outgoing edge threshold for hub pruning. Range: 100-200000.
+# Pruning reduces work but can miss paths or change the best path found.
+hub_max = 2500
+# Maximum expanded search states. Minimum: 1.
+settle_cap = 400000
+# Finite seconds >= 0; 0 means unlimited. Browser time selection overrides this.
+# Checked between expansions, so a slow expansion can exceed the allowance.
+time_budget = 12.0
+
+# Tighter limits for low_memory = true or --low-mem.
+[search_low_memory]
+hub_max = 800
+settle_cap = 100000
+time_budget = 6.0
